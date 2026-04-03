@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCode Sandbox Killer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 2rem;
+            font-size: 1.8rem;
+        }
+
+        .project {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .project-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        .project-worktree {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin-top: 0.25rem;
+        }
+
+        .clear-btn {
+            background: #da3633;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .clear-btn:hover {
+            background: #f85149;
+        }
+
+        .sandbox-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sandbox-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .sandbox-item .value {
+            color: #79c0ff;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.85rem;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #f85149;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 0.25rem;
+            line-height: 1;
+        }
+
+        .delete-btn:hover {
+            color: #ff7b72;
+        }
+
+        .no-sandboxes {
+            color: #8b949e;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #8b949e;
+        }
+
+        .db-selector {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .db-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #8b949e;
+            font-size: 0.85rem;
+        }
+
+        .db-input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .db-input-row input[type="text"] {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: #c9d1d9;
+            font-size: 0.9rem;
+        }
+
+        .browse-btn, .load-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .browse-btn:hover, .load-btn:hover {
+            background: #30363d;
+        }
+
+        .load-btn {
+            background: #238636;
+            border-color: #238636;
+            color: white;
+        }
+
+        .load-btn:hover {
+            background: #2ea043;
+        }
+
+        .load-btn:disabled {
+            background: #21262d;
+            border-color: #30363d;
+            color: #484f58;
+            cursor: not-allowed;
+        }
+
+        .error-state {
+            background: #2d1214;
+            border: 1px solid #f8514966;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #f85149;
+        }
+
+        .warning-banner {
+            background: #3d1f00;
+            border: 2px solid #d29922;
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-banner h2 {
+            color: #f0883e;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .warning-banner ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .warning-banner li {
+            color: #e3b341;
+            font-size: 0.9rem;
+            padding: 0.3rem 0;
+            padding-left: 1.25rem;
+            position: relative;
+        }
+
+        .warning-banner li::before {
+            content: "!";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            color: #f0883e;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .modal-header h3 {
+            color: #f0f6fc;
+            font-size: 1rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 0.25rem;
+        }
+
+        .modal-close:hover {
+            color: #f0f6fc;
+        }
+
+        .modal-path {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .modal-path input {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            color: #c9d1d9;
+            font-size: 0.85rem;
+        }
+
+        .modal-path button {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .modal-path button:hover {
+            background: #30363d;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 0.5rem;
+        }
+
+        .file-entry {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .file-entry:hover {
+            background: #21262d;
+        }
+
+        .file-entry .icon {
+            font-size: 1.1rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+
+        .file-entry .name {
+            flex: 1;
+        }
+
+        .file-entry.dir .name {
+            color: #58a6ff;
+        }
+
+        .file-entry.db .name {
+            color: #7ee787;
+        }
+
+        .file-entry .select-btn {
+            display: none;
+            background: #238636;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            color: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .file-entry.db:hover .select-btn {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenCode Sandbox Killer</h1>
+
+    <div class="db-selector">
+        <form method="POST" action="/set_db" class="db-form">
+            <label for="db_path">Database path:</label>
+            <div class="db-input-row">
+                <input type="text" id="db_path" name="db_path" value="{{ db_path }}" placeholder="Enter or browse for .db file...">
+                <button type="button" class="browse-btn" onclick="openBrowseModal()">Browse</button>
+                <button type="submit" class="load-btn" id="loadBtn" disabled>Load</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="warning-banner">
+        <h2>WARNING: DESTRUCTIVE OPERATIONS</h2>
+        <ul>
+            <li>Deleting a sandbox removes BOTH the database entry AND the actual directory on disk</li>
+            <li>All files inside the sandbox directory will be permanently deleted with no recovery</li>
+            <li>"Clear All" will delete every sandbox directory for that project</li>
+            <li>These actions cannot be undone</li>
+        </ul>
+    </div>
+
+    {% if not db_selected %}
+    <div class="error-state">Select a database file to get started</div>
+    {% elif not db_exists %}
+    <div class="error-state">Database file not found: {{ db_path }}</div>
+    {% endif %}
+
+    {% if projects %}
+        {% for project in projects %}
+        <div class="project">
+            <div class="project-header">
+                <div>
+                    <div class="project-name">{{ project.name }}</div>
+                    <div class="project-worktree">{{ project.worktree }}</div>
+                </div>
+                {% if project.sandboxes %}
+                <button type="button" class="clear-btn" onclick="confirmClearAll('{{ project.id }}', {{ project.sandboxes | tojson }})">Clear All</button>
+                {% endif %}
+            </div>
+
+            {% if project.sandboxes %}
+            <div class="sandbox-list">
+                {% for sandbox in project.sandboxes %}
+                <div class="sandbox-item">
+                    <span class="value">{{ sandbox }}</span>
+                    <form method="POST" action="/delete_sandbox" style="display: inline;">
+                        <input type="hidden" name="project_id" value="{{ project.id }}">
+                        <input type="hidden" name="sandbox" value="{{ loop.index0 }}">
+                        <button type="submit" class="delete-btn" title="Delete">&times;</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-sandboxes">No sandboxes configured</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">No projects found in the database</div>
+    {% endif %}
+
+    <div class="modal-overlay" id="browseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Select Database</h3>
+                <button class="modal-close" onclick="closeBrowseModal()">&times;</button>
+            </div>
+            <div class="modal-path">
+                <input type="text" id="modalPath" readonly>
+                <button onclick="navigateUp()">&#x2B06; Up</button>
+            </div>
+            <div class="modal-body" id="fileList"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 style="color: #f85149;">Confirm Delete All Sandboxes</h3>
+                <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #30363d;">
+                <p style="color: #f0883e; font-size: 0.9rem; margin-bottom: 0.75rem;">The following directories will be permanently deleted from disk:</p>
+                <div id="confirmList" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            <div style="padding: 1rem 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button class="browse-btn" onclick="closeConfirmModal()">Cancel</button>
+                <form id="confirmForm" method="POST" style="display: inline;">
+                    <button type="submit" class="clear-btn">Delete Everything</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPath = '';
+
+        function openBrowseModal() {
+            document.getElementById('browseModal').classList.add('active');
+            loadFiles('{{ db_path | replace("\\", "\\\\") | replace("'", "\\'") }}'.split(/[\\/]/).slice(0, -1).join('/') || 'C:');
+        }
+
+        function closeBrowseModal() {
+            document.getElementById('browseModal').classList.remove('active');
+        }
+
+        function loadFiles(path) {
+            currentPath = path;
+            fetch('/browse?path=' + encodeURIComponent(path))
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('modalPath').value = data.current_path;
+                    const list = document.getElementById('fileList');
+                    list.innerHTML = '';
+
+                    if (data.parent_path) {
+                        const entry = document.createElement('div');
+                        entry.className = 'file-entry dir';
+                        entry.innerHTML = '<span class="icon">&#x1F4C1;</span><span class="name">..</span>';
+                        entry.onclick = () => loadFiles(data.parent_path);
+                        list.appendChild(entry);
+                    }
+
+                    data.entries.forEach(entry => {
+                        const div = document.createElement('div');
+                        div.className = 'file-entry' + (entry.is_dir ? ' dir' : '') + (entry.is_db ? ' db' : '');
+
+                        if (entry.is_dir) {
+                            div.innerHTML = '<span class="icon">&#x1F4C1;</span><span class="name">' + entry.name + '</span>';
+                            div.onclick = () => loadFiles(entry.path);
+                        } else {
+                            div.innerHTML = '<span class="icon">&#x1F4C4;</span><span class="name">' + entry.name + '</span><button class="select-btn">Select</button>';
+                            if (entry.is_db) {
+                                div.querySelector('.select-btn').onclick = (e) => {
+                                    e.stopPropagation();
+                                    selectDb(entry.path);
+                                };
+                            }
+                        }
+
+                        list.appendChild(div);
+                    });
+                });
+        }
+
+        function navigateUp() {
+            const path = document.getElementById('modalPath').value;
+            const parent = path.split(/[\\/]/).slice(0, -1).join(path.includes('\\') ? '\\' : '/');
+            if (parent) loadFiles(parent);
+        }
+
+        function selectDb(path) {
+            document.getElementById('db_path').value = path;
+            updateLoadBtn();
+            closeBrowseModal();
+        }
+
+        document.getElementById('browseModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('browseModal')) closeBrowseModal();
+        });
+
+        function confirmClearAll(projectId, sandboxes) {
+            const list = document.getElementById('confirmList');
+            list.innerHTML = '';
+            sandboxes.forEach(path => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding: 0.5rem; margin-bottom: 0.25rem; background: #21262d; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: #f85149; word-break: break-all;';
+                div.textContent = path;
+                list.appendChild(div);
+            });
+            document.getElementById('confirmForm').action = '/clear_sandboxes/' + projectId;
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+
+        document.getElementById('confirmModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('confirmModal')) closeConfirmModal();
+        });
+
+        const dbInput = document.getElementById('db_path');
+        const loadBtn = document.getElementById('loadBtn');
+
+        function updateLoadBtn() {
+            loadBtn.disabled = !dbInput.value.trim();
+        }
+
+        dbInput.addEventListener('input', updateLoadBtn);
+        updateLoadBtn();
+    </script>
